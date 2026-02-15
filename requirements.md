@@ -1,5 +1,5 @@
 # GrievAI - Requirements Specification
-## AI for Bharat Hackathon - 48 Hour MVP
+## AI for Bharat Hackathon 
 
 ## 1. Problem Statement
 
@@ -421,20 +421,11 @@
 - **Reliability**: 99.9% uptime SLA for critical government services
 - **No Rate Limits**: Unlimited API calls vs 60 min/month free tier
 - **Better Security**: Enterprise-grade security features
-- **Cost Efficiency**: Despite paid services, 90-95% cheaper than manual processing
-
-**Estimated Costs**:
-- Prototype: $0-50/month (free tiers)
-- Production: $400-500/month (10,000 complaints/day)
-- National Scale: $1,500-2,000/month (100,000 complaints/day)
-
-**ROI**: Every ₹1 spent on cloud services saves ₹20-50 in manual processing costs.
-
+- **Cost Efficiency**
 ---
 
 **Document Version**: 1.0  
 **Hackathon**: AI for Bharat  
-**Timeline**: 48 hours  
 **Platform**: Web-based (Mobile Compatible)  
 **Cloud Strategy**: Free tier for prototype, Paid tier for production
 
@@ -443,3 +434,4 @@
 **Document Version**: 1.0  
 **Hackathon**: AI for Bharat  
 **Platform**: Web-based (Mobile Compatible)
+
