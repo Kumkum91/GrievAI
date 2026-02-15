@@ -84,6 +84,7 @@ MongoDB Atlas + AWS S3
 
 **Phase 1 (MVP)**: Voice (Hindi/English), 5 categories, tracking, pattern detection  
 **Future :**
+
 **Phase 2**: Mobile apps, 15+ languages, SMS/Email notifications  
 **Phase 3**: National deployment, CPGRAMS integration, predictive analytics
 
