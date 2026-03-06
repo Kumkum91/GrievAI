@@ -1,0 +1,176 @@
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body{
+  margin:0;
+  padding:0;
+}
+
+.portal-container{
+  background:#e6f4d7;
+  min-height:100vh;
+  padding:40px;
+  font-family:Arial;
+}
+
+/* TITLE */
+.portal-title{
+  text-align:center;
+  color:#1b5e20;
+  margin-bottom:40px;
+}
+
+/* MAIN ROW */
+.portal-content{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:50px;
+}
+
+/* MAP SECTION */
+.map-section{
+  width:420px;
+  height:300px;
+}
+
+/* FORCE LEAFLET MAP SIZE */
+.map-section .leaflet-container{
+  width:100%;
+  height:100%;
+  border-radius:10px;
+}
+
+/* WHITE COMPLAINT BOX */
+.complaint-box{
+  background:white;
+  padding:30px;
+  border-radius:12px;
+  width:320px;
+  text-align:center;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* BUTTON */
+.submit-btn{
+  margin-top:20px;
+  background:#2ecc71;
+  border:none;
+  padding:10px 25px;
+  border-radius:20px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.submit-btn:hover{
+  background:#27ae60;
+}
+
+/* Admin Dashboard */
+.admin-container {
+  min-height: 100vh;
+  padding: 30px;
+  background-color: #79a9c7; /* Light Blue BG */
+  font-family: Arial, sans-serif;
+}
+
+/* Main Heading */
+.admin-title {
+  color: #1b3d73; /* Darker Blue */
+  font-size: 36px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+/* Section Headings */
+.section-title {
+  color: #1b3d73; /* Darker Blue */
+  font-size: 22px;
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+/* Summary Cards */
+.summary-section {
+  margin-bottom: 40px;
+}
+
+.summary-cards {
+  display: flex;
+  gap: 20px;
+}
+
+.summary-card {
+  background-color: #fff;
+  flex: 1;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  color: #000; /* Card text in black */
+}
+
+.card-title {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.card-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #000; /* Value text black */
+}
+
+/* Complaints Table */
+.table-section {
+  margin-bottom: 40px;
+}
+
+.complaints-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  color: #000; /* Table text black */
+}
+
+.complaints-table th,
+.complaints-table td {
+  padding: 12px 15px;
+  text-align: left;
+  color: #000; /* Table content black */
+}
+
+.complaints-table th {
+  background-color: #1b3d73; /* Darker Blue header */
+  color: #fff; /* Header text white */
+}
+
+/* Analytics / Charts */
+.analytics-section .charts-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.chart-card {
+  background-color: #fff;
+  flex: 1;
+  min-width: 250px;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  color: #000; /* Chart text black */
+}
+
+.chart-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #1b3d73; /* Darker Blue title */
+}
