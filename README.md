@@ -204,8 +204,8 @@ Edit `frontend/vite.config.ts` to point to your Lambda API Gateway URL.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `AWS_ACCESS_KEY_ID` | AWS Access Key | `AKIAIOSFODNN7EXAMPLE` |
-| `AWS_SECRET_ACCESS_KEY` | AWS Secret Key | `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY` |
+| `AWS_ACCESS_KEY_ID` | AWS Access Key | `**************` |
+| `AWS_SECRET_ACCESS_KEY` | AWS Secret Key | `***********************` |
 | `AWS_REGION` | AWS Region | `us-east-1` |
 | `S3_BUCKET_NAME` | S3 Bucket for audio | `grievai-audio-storage` |
 | `DYNAMODB_TABLE` | DynamoDB table name | `grievances` |
