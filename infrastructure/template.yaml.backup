@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Minimal GrievAI Demo Stack
+
+Resources:
+
+  # Audio Upload Lambda
+  UploadAudioFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: upload_audio.handler
+      Runtime: python3.10
+      CodeUri: functions/upload_audio/
+      Role: !GetAtt UploadAudioFunctionRole.Arn
+      Timeout: 30
+
+  # Transcribe Lambda
+  TranscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: transcribe.handler
+      Runtime: python3.10
+      CodeUri: functions/transcribe/
+      Role: !GetAtt TranscribeFunctionRole.Arn
+      Timeout: 30
+
+  # Classify Complaint Lambda
+  ClassifyComplaintFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: classify.handler
+      Runtime: python3.10
+      CodeUri: functions/classify/
+      Role: !GetAtt ClassifyComplaintFunctionRole.Arn
+      Timeout: 30
+
+  # Minimal IAM Roles
+  UploadAudioFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  TranscribeFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  ClassifyComplaintFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"

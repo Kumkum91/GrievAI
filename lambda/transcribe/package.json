@@ -1,0 +1,9 @@
+{
+  "name": "transcribe",
+  "version": "1.0.0",
+  "description": "Lambda function to transcribe audio using Amazon Transcribe",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-transcribe": "^3.400.0"
+  }
+}

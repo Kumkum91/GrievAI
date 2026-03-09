@@ -1,0 +1,498 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: GrievAI - Voice First Grievance Intelligence Platform Infrastructure
+
+# Global configuration for all Lambda functions
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        AWS_REGION: !Ref AWS::Region
+        S3_BUCKET_NAME: !Ref AudioStorageBucket
+        DYNAMODB_TABLE: !Ref GrievancesTable
+        BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+    Tracing: Active
+
+# Parameters for customization
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+Resources:
+  # ==========================================
+  # S3 BUCKET FOR AUDIO STORAGE
+  # ==========================================
+  AudioStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub grievai-audio-storage-${Environment}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldAudioFiles
+            Status: Enabled
+            ExpirationInDays: 90
+            NoncurrentVersionExpirationInDays: 30
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+            AllowedHeaders:
+              - '*'
+            MaxAge: 3000
+      Tags:
+        - Key: Project
+          Value: GrievAI
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ==========================================
+  # DYNAMODB TABLE FOR GRIEVANCES
+  # ==========================================
+  GrievancesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub grievances-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: grievanceId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: grievanceId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: StatusIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: GrievAI
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ==========================================
+  # LAMBDA FUNCTION 1: UPLOAD AUDIO
+  # ==========================================
+  UploadAudioFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GrievAI-UploadAudio-${Environment}
+      CodeUri: ../lambda/upload-audio/
+      Handler: index.handler
+      Description: Receives audio file and uploads to S3
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref AudioStorageBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Events:
+        UploadAudioApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GrievAIApi
+            Path: /api/upload-audio
+            Method: POST
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # LAMBDA FUNCTION 2: TRANSCRIBE AUDIO
+  # ==========================================
+  TranscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GrievAI-Transcribe-${Environment}
+      CodeUri: ../lambda/transcribe/
+      Handler: index.handler
+      Description: Starts Amazon Transcribe job and returns transcript
+      Timeout: 300
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref AudioStorageBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # LAMBDA FUNCTION 3: CLASSIFY COMPLAINT
+  # ==========================================
+  ClassifyComplaintFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GrievAI-ClassifyComplaint-${Environment}
+      CodeUri: ../lambda/classify-complaint/
+      Handler: index.handler
+      Description: Calls Bedrock Claude 3 Haiku to analyze complaint
+      Timeout: 60
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # LAMBDA FUNCTION 4: SAVE GRIEVANCE
+  # ==========================================
+  SaveGrievanceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GrievAI-SaveGrievance-${Environment}
+      CodeUri: ../lambda/save-grievance/
+      Handler: index.handler
+      Description: Stores complaint data in DynamoDB
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GrievancesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # LAMBDA FUNCTION 5: GET GRIEVANCE
+  # ==========================================
+  GetGrievanceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GrievAI-GetGrievance-${Environment}
+      CodeUri: ../lambda/get-grievance/
+      Handler: index.handler
+      Description: Returns complaint data by grievanceId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref GrievancesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Events:
+        GetGrievanceApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GrievAIApi
+            Path: /api/grievance/{id}
+            Method: GET
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # LAMBDA FUNCTION 6: LIST GRIEVANCES
+  # ==========================================
+  ListGrievancesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GrievAI-ListGrievances-${Environment}
+      CodeUri: ../lambda/list-grievances/
+      Handler: index.handler
+      Description: Returns all grievances
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref GrievancesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Events:
+        ListGrievancesApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GrievAIApi
+            Path: /api/grievances
+            Method: GET
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # LAMBDA FUNCTION 7: UPDATE GRIEVANCE STATUS
+  # ==========================================
+  UpdateGrievanceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GrievAI-UpdateGrievance-${Environment}
+      CodeUri: ../lambda/update-grievance/
+      Handler: index.handler
+      Description: Updates grievance status (admin)
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GrievancesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Events:
+        UpdateGrievanceApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GrievAIApi
+            Path: /api/grievance/{id}/update
+            Method: POST
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # LAMBDA FUNCTION 8: PROCESS COMPLAINT (ORCHESTRATOR)
+  # ==========================================
+  ProcessComplaintFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub GrievAI-ProcessComplaint-${Environment}
+      CodeUri: ../lambda/process-complaint/
+      Handler: index.handler
+      Description: Orchestrates the complete complaint processing pipeline
+      Timeout: 300
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref TranscribeFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ClassifyComplaintFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SaveGrievanceFunction
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Events:
+        ProcessComplaintApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref GrievAIApi
+            Path: /api/process-complaint
+            Method: POST
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # API GATEWAY
+  # ==========================================
+  GrievAIApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub GrievAI-API-${Environment}
+      StageName: !Ref Environment
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        MaxAge: "'600'"
+      TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          MetricsEnabled: true
+      Tags:
+        Project: GrievAI
+        Environment: !Ref Environment
+
+  # ==========================================
+  # CLOUDWATCH LOG GROUPS
+  # ==========================================
+  UploadAudioLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/GrievAI-UploadAudio-${Environment}
+      RetentionInDays: 30
+
+  TranscribeLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/GrievAI-Transcribe-${Environment}
+      RetentionInDays: 30
+
+  ClassifyComplaintLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/GrievAI-ClassifyComplaint-${Environment}
+      RetentionInDays: 30
+
+  SaveGrievanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/GrievAI-SaveGrievance-${Environment}
+      RetentionInDays: 30
+
+  GetGrievanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/GrievAI-GetGrievance-${Environment}
+      RetentionInDays: 30
+
+  ListGrievancesLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/GrievAI-ListGrievances-${Environment}
+      RetentionInDays: 30
+
+  UpdateGrievanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/GrievAI-UpdateGrievance-${Environment}
+      RetentionInDays: 30
+
+  ProcessComplaintLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/GrievAI-ProcessComplaint-${Environment}
+      RetentionInDays: 30
+
+  # ==========================================
+  # CLOUDWATCH ALARMS
+  # ==========================================
+  ProcessComplaintErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub GrievAI-ProcessComplaint-Errors-${Environment}
+      AlarmDescription: Alert when ProcessComplaint function has errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ProcessComplaintFunction
+
+  DynamoDBThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub GrievAI-DynamoDB-Throttle-${Environment}
+      AlarmDescription: Alert when DynamoDB is throttling requests
+      MetricName: UserErrors
+      Namespace: AWS/DynamoDB
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: TableName
+          Value: !Ref GrievancesTable
+
+# ==========================================
+# OUTPUTS
+# ==========================================
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${GrievAIApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+    Export:
+      Name: !Sub GrievAI-ApiEndpoint-${Environment}
+
+  S3BucketName:
+    Description: S3 bucket for audio storage
+    Value: !Ref AudioStorageBucket
+    Export:
+      Name: !Sub GrievAI-S3Bucket-${Environment}
+
+  DynamoDBTableName:
+    Description: DynamoDB table name
+    Value: !Ref GrievancesTable
+    Export:
+      Name: !Sub GrievAI-DynamoDBTable-${Environment}
+
+  UploadAudioFunctionArn:
+    Description: Upload Audio Lambda Function ARN
+    Value: !GetAtt UploadAudioFunction.Arn
+
+  ProcessComplaintFunctionArn:
+    Description: Process Complaint Lambda Function ARN
+    Value: !GetAtt ProcessComplaintFunction.Arn
+
+  GetGrievanceFunctionArn:
+    Description: Get Grievance Lambda Function ARN
+    Value: !GetAtt GetGrievanceFunction.Arn
+
+  Region:
+    Description: AWS Region
+    Value: !Ref AWS::Region

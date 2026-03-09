@@ -1,0 +1,62 @@
+service: grievai-backend
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${env:AWS_REGION, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  environment:
+    AWS_REGION: ${env:AWS_REGION}
+    S3_BUCKET_NAME: ${env:S3_BUCKET_NAME}
+    DYNAMODB_TABLE: ${env:DYNAMODB_TABLE}
+    BEDROCK_MODEL_ID: ${env:BEDROCK_MODEL_ID}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+          Resource: "arn:aws:s3:::${env:S3_BUCKET_NAME}/*"
+        - Effect: Allow
+          Action:
+            - transcribe:StartTranscriptionJob
+            - transcribe:GetTranscriptionJob
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+          Resource: "arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_TABLE}"
+
+functions:
+  api:
+    handler: src/lambda.handler
+    timeout: 30
+    memorySize: 512
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+            allowCredentials: false
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 5000

@@ -1,0 +1,9 @@
+{
+  "name": "process-complaint",
+  "version": "1.0.0",
+  "description": "Lambda orchestrator function to process complete complaint pipeline",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.400.0"
+  }
+}

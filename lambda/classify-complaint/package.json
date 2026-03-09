@@ -1,0 +1,9 @@
+{
+  "name": "classify-complaint",
+  "version": "1.0.0",
+  "description": "Lambda function to classify complaints using Amazon Bedrock",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.400.0"
+  }
+}
